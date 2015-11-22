@@ -33,6 +33,7 @@
 (provide 'auto-complete-clang)
 (require 'auto-complete)
 
+(defvar ac-clang-debug nil)
 
 (defcustom ac-clang-executable
   (executable-find "clang")
@@ -148,7 +149,9 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
                 cmd "\n\n")
         (insert err)
         (setq buffer-read-only t)
-        (goto-char (point-min))))))
+        (goto-char (point-min))))
+    (when ac-clang-debug
+      (message "clang failed with error %d: %s\n%s" res cmd err))))
 
 (defun ac-clang-call-process (prefix &rest args)
   (let ((buf (get-buffer-create "*clang-output*"))
@@ -162,7 +165,8 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
       (unless (eq 0 res)
         (ac-clang-handle-error res args))
       ;; Still try to get any useful input.
-      (ac-clang-parse-output prefix))))
+      ;; (ac-clang-parse-output prefix)
+      )))
 
 
 (defsubst ac-clang-build-location (pos)
