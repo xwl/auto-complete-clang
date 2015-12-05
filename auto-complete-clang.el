@@ -1,12 +1,15 @@
 ;;; auto-complete-clang.el --- Auto Completion source for clang for GNU Emacs
 
-;; Copyright (C) 2010  Brian Jiang
+;; Copyright (C) 2010 Brian Jiang
+;; Copyright (C) 2015 William Xu
 
-;; Author: Brian Jiang <brianjcj@gmail.com>
+;; Authors: Brian Jiang <brianjcj@gmail.com>
+;;          William Xu <william.xwl@gmail.com>
+
 ;; Keywords: completion, convenience
 ;; URL: https://github.com/brianjcj/auto-complete-clang
 ;; Version: 0.1i
-;; Package-Requires: ((auto-complete "1.3.1"))
+;; Package-Requires: ((auto-complete "1.3.1") (projectile "0.13.0-cvs"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -29,9 +32,9 @@
 
 ;;; Code:
 
-
-(provide 'auto-complete-clang)
 (require 'auto-complete)
+(require 'projectile)
+(require 'json)
 
 (defvar ac-clang-debug nil)
 
@@ -62,7 +65,17 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
   :group 'auto-complete
   :type '(repeat (string :tag "Argument" "")))
 
-;;; The prefix header to use with Clang code completion. 
+(defcustom ac-clang-cmake-compile-commands-json-files '()
+  "compile_commands.json files created by:
+
+    cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1"
+  :group 'auto-complete
+  :type 'list)
+
+;; ((root . parsed-js)...)
+(defvar ac-clang-cmake-json-cache '())
+
+;;; The prefix header to use with Clang code completion.
 (defvar ac-clang-prefix-header nil)
 
 ;;; Set the Clang prefix header
@@ -165,7 +178,7 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
       (unless (eq 0 res)
         (ac-clang-handle-error res args))
       ;; Still try to get any useful input.
-      ;; (ac-clang-parse-output prefix)
+      (ac-clang-parse-output prefix)
       )))
 
 
@@ -191,7 +204,15 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
              "c++"))))
 
 (defsubst ac-clang-build-complete-args (pos)
-  (append '("-fsyntax-only")
+  (append (when ac-clang-cmake-compile-commands-json-files
+            (ac-clang-get-cmake-args-only-includes))
+
+          (list "-iquote" default-directory)
+
+          ;; ignore errors to keep preparing completions
+          (list  "-ferror-limit=1000")
+
+          (list "-std=c++11" "-fsyntax-only")
           (unless ac-clang-auto-save
             (list "-x" (ac-clang-lang-option)))
           ac-clang-flags
@@ -199,7 +220,6 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
             (list "-include-pch" (expand-file-name ac-clang-prefix-header)))
           `("-Xclang" ,(concat "-code-completion-at=" (ac-clang-build-location pos)))
           (list (if ac-clang-auto-save buffer-file-name "-"))))
-
 
 (defsubst ac-clang-clean-document (s)
   (when s
@@ -400,6 +420,44 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
 (defun ac-template-prefix ()
   ac-template-start-point)
 
+(defun ac-clang-get-cmake-args ()
+  (let* ((projectile-require-project-root nil)
+         (root (projectile-project-root))
+         (js-data (assoc root ac-clang-cmake-json-cache)))
+    (if js-data
+        (setq js-data (cdr js-data))
+      (let ((json-file (find-if (lambda (f) (string-match-p root f))
+                                ac-clang-cmake-compile-commands-json-files)))
+        (when json-file
+          ;; (message "compile_commands.json not found, check `ac-clang-cmake-compile-commands-json-files'")
+          (setq js-data (json-read-file json-file))
+          (setq ac-clang-cmake-json-cache (cons (cons root js-data) ac-clang-cmake-json-cache)))))
+
+    (when js-data
+      (let* ((file (file-truename (buffer-file-name)))
+             (matched-entry
+              (find-if (lambda (entry)
+                         (equal (file-truename (cdr (assq 'file entry))) file))
+                       js-data))
+             (cmd (cdr (assq 'command matched-entry)))
+             (cmake-args ""))
+        (setq cmd (split-string (replace-regexp-in-string " +-o .*\\|(\\|)" "" cmd)))
+        (setq cmake-args (cdr cmd))))))
+
+(defun ac-clang-get-cmake-args-only-includes ()
+  (let ((lst (ac-clang-get-cmake-args))
+        (includes '()))
+    (let ((case-fold-search nil))
+      (while lst
+        (setq el (car lst))
+        (cond ((string-match-p "-I\\|--sysroot=" el)
+               (setq includes (cons el includes)))
+              ((string= "-isystem" el)
+               (setq includes (cons el includes))
+               (setq lst (cdr lst))
+               (setq includes (cons (car lst) includes))))
+        (setq lst (cdr lst)))
+      (reverse includes))))
 
 ;; this source shall only be used internally.
 (ac-define-source template
@@ -411,4 +469,5 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
     (cache)
     (symbol . "t")))
 
+(provide 'auto-complete-clang)
 ;;; auto-complete-clang.el ends here
