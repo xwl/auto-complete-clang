@@ -203,22 +203,27 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
             (t
              "c++"))))
 
-(defsubst ac-clang-build-complete-args (pos)
+(defun ac-clang-build-complete-args (pos)
   (append (when ac-clang-cmake-compile-commands-json-files
             (ac-clang-get-cmake-args-only-includes))
 
           (list "-iquote" default-directory)
 
-          ;; ignore errors to keep preparing completions
-          (list  "-ferror-limit=1000")
+          ac-clang-flags
 
-          (list "-std=c++11" "-fsyntax-only")
+          (list  "-ferror-limit=1000" ; ignore errors to keep preparing completions
+                 "-std=c++11"
+                 "-fsyntax-only"
+                 "-w")
+
           (unless ac-clang-auto-save
             (list "-x" (ac-clang-lang-option)))
-          ac-clang-flags
+
           (when (stringp ac-clang-prefix-header)
             (list "-include-pch" (expand-file-name ac-clang-prefix-header)))
+
           `("-Xclang" ,(concat "-code-completion-at=" (ac-clang-build-location pos)))
+
           (list (if ac-clang-auto-save buffer-file-name "-"))))
 
 (defsubst ac-clang-clean-document (s)
@@ -237,13 +242,8 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
 
 
 (defface ac-clang-candidate-face
-  '((t (:background "lightgray" :foreground "navy")))
+  '((t (:inherit ac-candidate-face :foreground "blue violet")))
   "Face for clang candidate"
-  :group 'auto-complete)
-
-(defface ac-clang-selection-face
-  '((t (:background "navy" :foreground "white")))
-  "Face for the clang selected candidate."
   :group 'auto-complete)
 
 (defsubst ac-in-string/comment ()
@@ -323,7 +323,6 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
 (ac-define-source clang
   '((candidates . ac-clang-candidate)
     (candidate-face . ac-clang-candidate-face)
-    (selection-face . ac-clang-selection-face)
     (prefix . ac-clang-prefix)
     (requires . 0)
     (document . ac-clang-document)
