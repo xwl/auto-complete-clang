@@ -151,7 +151,9 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
                   (buffer-substring-no-properties (point-min)
                                                   (1- (match-beginning 0)))
                 ;; Warn the user more agressively if no match was found.
-                (message "clang failed with error %d:\n%s" res cmd)
+                (if ac-clang-debug
+                    (message "clang failed with error %d:\n%s" res cmd)
+                  (message "clang failed with error %d" res))
                 (buffer-string))))
 
     (with-current-buffer buf
