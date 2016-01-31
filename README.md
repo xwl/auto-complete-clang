@@ -30,13 +30,4 @@ The AC sources for Clang. Requirements:
 (setq ac-clang-flags '("-I/path/to/project/inc"))
 ```
 
-- integrate with cmake projects
-
-  Add path of compile_commands.json to `ac-clang-cmake-compile-commands-json-files`.
-
-```lisp
-(setq ac-clang-cmake-compile-commands-json-files
-      '(
-        "/path/build/compile_commands.json"
-        ))
-```
+- integrate with cmake projects, see [cmake-compile-commands](https://github.com/xwl/cmake-compile-commands)
