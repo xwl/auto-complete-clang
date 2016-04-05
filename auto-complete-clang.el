@@ -38,9 +38,8 @@
 
 (defvar ac-clang-debug nil)
 
-(defcustom ac-clang-executable
-  (executable-find "clang")
-  "*Location of clang executable"
+(defcustom ac-clang-executable (executable-find "clang")
+  "*Location of clang executable."
   :group 'auto-complete
   :type 'file)
 
@@ -48,13 +47,13 @@
   "*Determines whether to save the buffer when retrieving completions.
 Old version of clang can only complete correctly when the buffer has been saved.
 Now clang can parse the codes from standard input so that we can turn this option
-to Off. If you are still using the old clang, turn it on!"
+to Off.  If you are still using the old clang, turn it on!"
   :group 'auto-complete
   :type '(choice (const :tag "Off" nil)
                  (const :tag "On" t)))
 
 (defcustom ac-clang-lang-option-function nil
-  "*function to return the lang type for option -x."
+  "*Function to return the lang type for option -x."
   :group 'auto-complete
   :type 'function)
 
@@ -68,8 +67,8 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
 ;;; The prefix header to use with Clang code completion.
 (defvar ac-clang-prefix-header nil)
 
-;;; Set the Clang prefix header
 (defun ac-clang-set-prefix-header (ph)
+  "Set the Clang prefix header with PH."
   (interactive
    (let ((def (car (directory-files "." t "\\([^.]h\\|[^h]\\).pch\\'" t))))
      (list
@@ -83,13 +82,13 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
 
 ;;; Set a new cflags for clang
 (defun ac-clang-set-cflags ()
-  "set new cflags for clang from input string"
+  "Set new cflags for clang from input string."
   (interactive)
   (setq ac-clang-flags (split-string (read-string "New cflags: "))))
 
 ;;; Set new cflags from shell command output
 (defun ac-clang-set-cflags-from-shell-command ()
-  "set new cflags for ac-clang from shell command output"
+  "Set new cflags for ac-clang from shell command output."
   (interactive)
   (setq ac-clang-flags
     (split-string
@@ -196,10 +195,10 @@ This variable will typically contain include paths, e.g., ( \"-I~/MyProject\", \
              "c++"))))
 
 (defun ac-clang-build-complete-args (pos)
-  (append (when cmake-compile-commands-json-files
+  (append (when cmake-compile-commands-build-directories
             (let ((root (cmake-compile-commands-project-root)))
               (when (cl-find-if (lambda (el) (string-match root el))
-                      cmake-compile-commands-json-files)
+                                cmake-compile-commands-build-directories)
                 (cmake-compile-commands-includes))))
 
           (list "-iquote" default-directory)
